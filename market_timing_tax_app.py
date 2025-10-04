@@ -369,28 +369,50 @@ if run_button:
         entry_month = int(i * cycle_months / num_entry_points)
         entry_months.append(entry_month)
     
+    # Calculate the range to display (from earliest entry to latest exit)
+    earliest_entry = min(entry_months)
+    latest_exit = max(entry_months) + investment_years * 12
+    
     # Visualize the market and entry points
     st.header("📈 Market Model & Entry Points")
     
     fig1, ax1 = plt.subplots(figsize=(14, 6))
     
-    time_years = np.arange(len(full_prices)) / 12
-    ax1.plot(time_years, full_prices, 'b-', linewidth=2, label='Market Price')
+    # Only show relevant portion of the market
+    display_start = earliest_entry
+    display_end = latest_exit
+    display_prices = full_prices[display_start:display_end + 1]
+    time_years = np.arange(len(display_prices)) / 12
     
-    # Mark entry points
+    ax1.plot(time_years, display_prices, 'b-', linewidth=2.5, label='Market Price')
+    
+    # Mark entry points and exit points
     colors = plt.cm.Set1(np.linspace(0, 1, num_entry_points))
     for i, entry_month in enumerate(entry_months):
-        entry_year = entry_month / 12
-        ax1.axvline(x=entry_year, color=colors[i], linestyle='--', linewidth=2,
-                   label=f'Entry Point {i+1} (Year {entry_year:.1f})')
+        entry_year = (entry_month - display_start) / 12
+        exit_month = entry_month + investment_years * 12
+        exit_year = (exit_month - display_start) / 12
+        
+        # Entry point
         ax1.scatter([entry_year], [full_prices[entry_month]], color=colors[i], 
-                   s=200, zorder=5, edgecolors='black', linewidth=2)
+                   s=300, zorder=5, edgecolors='black', linewidth=2, marker='o',
+                   label=f'Entry {i+1} (Year {entry_month/12:.1f})')
+        
+        # Exit point - BIG STAR
+        ax1.scatter([exit_year], [full_prices[exit_month]], color=colors[i], 
+                   s=600, zorder=6, edgecolors='black', linewidth=3, marker='*',
+                   label=f'Exit {i+1} (Year {exit_month/12:.1f})')
+        
+        # Draw line connecting entry to exit
+        ax1.plot([entry_year, exit_year], 
+                [full_prices[entry_month], full_prices[exit_month]], 
+                color=colors[i], linestyle='--', linewidth=1.5, alpha=0.5)
     
-    ax1.set_xlabel('Years', fontsize=12)
-    ax1.set_ylabel('Market Price ($)', fontsize=12)
-    ax1.set_title(f'Deterministic Market Model: {annual_drift*100:.1f}% Annual Drift, ±{amplitude*100:.0f}% Oscillation, {cycle_years:.1f}yr Cycle',
+    ax1.set_xlabel('Years from First Entry', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Market Price ($)', fontsize=12, fontweight='bold')
+    ax1.set_title(f'Market Model: {annual_drift*100:.1f}% Annual Drift, ±{amplitude*100:.0f}% Oscillation | {investment_years}yr Investment Period',
                  fontsize=14, fontweight='bold')
-    ax1.legend(loc='upper left', fontsize=10)
+    ax1.legend(loc='upper left', fontsize=9, ncol=2)
     ax1.grid(True, alpha=0.3)
     
     st.pyplot(fig1)
